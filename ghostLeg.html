@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爬梯子遊戲GHOST LEG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chocolate+Classical+Sans&display=swap" rel="stylesheet">
+<style>
+
+    body { font-family: 'Bungee', 'Chocolate Classical Sans', sans-serif; }
+    .card {
+            border-radius: 1rem; 
+    }
+    .btn { transition: all 0.2s ease-in-out; }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    textarea { resize: vertical; }
+    .end-point-label { transition: opacity 0.5s ease-in-out, color 0.5s ease-in-out, transform 0.3s ease; }
+    .title-font { font-family: 'Bungee', sans-serif; }
+    </style>
+</head>
+    <!--增加背景漸層顏色-->
+<body class="flex justify-center items-center min-h-screen p-4 bg-gradient-to-b from-sky-100 to-slate-700">
+
+    <div class="container max-w-4xl mx-auto">
+        <!-- 設定畫面 -->
+        <!-- 透明玻璃 -->
+        <div id="setupView" class="card p-8 bg-white/25 backdrop-blur-lg shadow-lg">
+
+            <h1 class="title-font text-5xl tracking-wider font-bold text-center text-slate-800">GHOST LEG</h1>
+            <h2 class="text-3xl text-center text-slate-600 mb-8">爬梯子遊戲產生器</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="startInputs" class=" lg:text-[20px] md:text-[15px] sm:text-[12px] block font-medium text-slate-700 font-normal">Enter starting points, one per line.</label>
+                    <label for="startInputs" class=" lg:text-[18px] md:text-[13px] sm:text-[10px] block font-medium text-slate-800 opacity-75 leading-tight">起點名稱 (每行一個)</label>
+                    <textarea id="startInputs" rows="5" class="lg:text-[20px] md:text-[15px] sm:text-[12px] mt-1 block w-full p-2 border border-slate-300 rounded-md">
+阿美
+阿坤
+阿涵
+阿喻
+阿珮
+                    </textarea>
+                </div>
+                <div>
+                    <label for="endInputs" class="lg:text-[20px] md:text-[15px] sm:text-[12px]  block font-medium text-slate-700 font-normal">Enter destinations, one per line.</label>
+                    <label for="endInputs" class="lg:text-[18px] md:text-[13px] sm:text-[10px] block font-medium text-slate-800 opacity-75 leading-tight">終點結果 (每行一個)</label>
+                    <textarea id="endInputs" rows="5" class="lg:text-[20px] md:text-[15px] sm:text-[12px] mt-1 block w-full p-2 border border-slate-300 rounded-md">
+PORSCHE
+TOYOTA
+MAZADA
+TESLA
+VOLKSWAGEN</textarea>
+                </div>
+                <button id="generateBtn" class="w-full btn bg-slate-700 text-white font-semibold py-3 rounded-lg shadow-md hover:bg-slate-700">
+                    <div>
+                        <span class="block text-lg leading-tight tracking-[5px]">產生梯子並開始遊戲</span>
+                        <span class="block text-lg opacity-75 font-normal tracking-[3px]">Generate & Start Game</span>
+                    </div>
+                </button>
+                <p id="setupError" class="text-red-500 text-center h-4"></p>
+            </div>
+        </div>
+
+        <!-- 遊戲畫面 (預設隱藏) -->
+        <div id="gameView" class="hidden text-center">
+            <div id="start-points" class="relative mx-auto" style="width: 800px; min-height: 50px;"></div>
+            <canvas id="ladderCanvas" width="800" height="600" class=" my-8 mx-auto block bg-white/35 backdrop-blur-lg shadow-lg rounded-2xl"></canvas>
+            <div id="end-points" class="relative mx-auto" style="width: 800px; min-height: 50px;"></div>
+            <div id="results" class="mt-2 text-2xl font-medium text-slate-300 h-16 flex flex-col items-center justify-center my-10"></div>
+            <div class="mt-4 flex justify-center space-x-4">
+                <button id="showAllBtn" class="btn bg-sky-800 text-white font-semibold py-2 px-6 rounded-lg w-50">
+                  <div>
+                    <span class="block text-base leading-tight tracking-[3px]">顯示所有結果</span>  
+                    <span class="block font-bold text-base opacity-75 font-normal tracking-[5px] ">SHOW All</span>
+                  </div>
+                </button>
+                <button id="resetBtn" class="btn bg-pink-800 text-white font-semibold py-2 px-6 rounded-lg w-40">
+                  <div>
+                    <span class="block text-base leading-tight tracking-[3px]">全部重設</span>
+                    <span class="block font-bold text-base opacity-75 font-normal tracking-[5px]">RESET</span>
+                  </div>
+                    
+                  </button>
+            </div>
+
+            <!-- 結果彈窗 (Modal) -->
+            <div id="summaryModal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50 hidden">
+                <div id="summaryView" class="card p-6 bg-white/60 backdrop-blur-lg shadow-lg w-full max-w-md relative">
+                    <button id="closeSummaryBtn" class="absolute top-2 right-3 text-2xl font-bold text-slate-600 hover:text-slate-800">&times;</button>
+                    <h2 class="text-2xl font-bold text-center text-slate-600 mb-1">Final Results</h2>
+                    <p class="text-xl font-bold text-center text-slate-600 mb-4 tracking-[5px]">最終結果</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[300px] text-center">
+                            <thead class="bg-slate-200 backdrop-blur-lg">
+                                <tr>
+                                    <th class="p-2 text-lg font-semibold text-slate-600">起點</th>
+                                    <th class="p-2 text-lg font-semibold text-slate-600">對應結果</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ... (script content)
+        const setupView = document.getElementById('setupView');
+        const gameView = document.getElementById('gameView');
+        const generateBtn = document.getElementById('generateBtn');
+        const showAllBtn = document.getElementById('showAllBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const startInputs = document.getElementById('startInputs');
+        const endInputs = document.getElementById('endInputs');
+        const setupError = document.getElementById('setupError');
+        
+        const canvas = document.getElementById('ladderCanvas');
+        const ctx = canvas.getContext('2d');
+        const startPointsContainer = document.getElementById('start-points');
+        const endPointsContainer = document.getElementById('end-points');
+        const resultsContainer = document.getElementById('results');
+        const summaryView = document.getElementById('summaryView');
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryTableBody = document.getElementById('summaryTableBody');
+        const closeSummaryBtn = document.getElementById('closeSummaryBtn');
+
+        let animationFrameId;
+
+        // 新增一個專門用來打開結果彈窗的函式
+        function openSummaryModal() {
+            summaryModal.classList.remove('hidden');
+        }
+
+        function initializeGame(config) {
+            startPointsContainer.innerHTML = '';
+            endPointsContainer.innerHTML = '';
+            resultsContainer.textContent = '';
+            summaryModal.classList.add('hidden');
+            summaryTableBody.innerHTML = '';
+            showAllBtn.disabled = false;
+
+            let completedPaths = [];
+            let revealedResults = [];
+
+            //音效設定
+            const tickSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
+            const finishSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.5, release: 0.2 } }).toDestination();
+
+            const { numLadders, startLabels, endLabels, rungs } = config;
+            const PADDING = 50;
+            const ANIMATION_DURATION = 1500;
+            const PATH_COLORS = ['#984B4B', '#949449', '#7373B9', '#9F4D95', '#BB3D00', '#73BF00', '#4F4F4F', '#930000', '#D9006C', '#6F00D2'];
+
+            const contentWidth = canvas.width - (PADDING * 2);
+            const spacing = contentWidth / (numLadders - 1);
+            const getX = (index) => PADDING + (index * spacing);
+
+            function getPathCoordinates(startLadderIndex) {
+                let currentLadder = startLadderIndex;
+                const path = [{ x: getX(currentLadder), y: PADDING }]; // 在起點記錄一個點
+                rungs.forEach(rung => {
+                    //如果水平岔路的入口是正好在現在的路線上，先記錄第一個點(橫線開始)，在結束也記錄一個點(橫線結束)
+                    if (rung.start === currentLadder) {
+                        path.push({ x: getX(currentLadder), y: rung.y }); currentLadder = rung.end; path.push({ x: getX(currentLadder), y: rung.y });
+                    // 若是在水平岔路的出口，則用這段
+                    } else if (rung.end === currentLadder) {
+                        path.push({ x: getX(currentLadder), y: rung.y }); currentLadder = rung.start; path.push({ x: getX(currentLadder), y: rung.y });
+                    }
+                });
+                path.push({ x: getX(currentLadder), y: canvas.height - PADDING });//紀錄終點位置
+                return { path:path, endPoint: currentLadder };
+            }
+
+            function drawSinglePath(path, color) {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.moveTo(path[0].x, path[0].y);
+                for (let i = 1; i < path.length; i++) {
+                    ctx.lineTo(path[i].x, path[i].y);
+                }
+                ctx.stroke();
+            }
+
+            function redrawCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = 'white';
+                ctx.shadowBlur = 5;
+                //畫垂直的梯子
+                for (let i = 0; i < numLadders; i++) {
+                    const x = getX(i);
+                    ctx.beginPath(); ctx.moveTo(x, PADDING); ctx.lineTo(x, canvas.height - PADDING); ctx.stroke();
+                }
+                //畫橫線
+                rungs.forEach(rung => {
+                    const startX = getX(rung.start);
+                    const endX = getX(rung.end);
+                    ctx.beginPath();
+                    ctx.moveTo(startX, rung.y);
+                    ctx.lineTo(endX, rung.y);
+                    ctx.stroke();
+                });
+                completedPaths.forEach(p => drawSinglePath(p.path, p.color));
+            }
+
+            function animatePath(path, color, onFinish) {
+                let startTime = null;
+                let lastPlayedSegment = -1;
+                function frame(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const elapsedTime = timestamp - startTime;
+                    const progress = Math.min(elapsedTime / ANIMATION_DURATION, 1); //計算路徑百分比
+
+                    redrawCanvas();
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+
+                    //acc = accumulator(累加器)，到目前為止，我已經累計了多少長度
+                    //p：正要處理的一個座標點
+                    //i：這個座標點在路線圖上的編號
+                    //path:代表一整個陣列(所有的座標陣列)
+                    const totalLength = path.reduce((acc, p, i) => i > 0 ? acc + Math.sqrt(Math.pow(p.x - path[i-1].x, 2) + Math.pow(p.y - path[i-1].y, 2)) : acc, 0);
+                    
+                    const distanceToDraw = progress * totalLength; //利用目前動畫完成的百分比 (progress)，來計算出路徑線條此刻應該被畫到的總長度 (distanceToDraw)
+                    let distanceCovered = 0;
+                    ctx.moveTo(path[0].x, path[0].y);
+                    for(let i=0; i < path.length - 1; i++){
+                        const segStart = path[i];
+                        const segEnd = path[i+1];
+                        const segLength = Math.sqrt(Math.pow(segEnd.x - segStart.x, 2) + Math.pow(segEnd.y - segStart.y, 2));
+                        //設定每一次轉彎就會發出音效
+                        if(distanceCovered + segLength >= distanceToDraw){
+                            if (i > lastPlayedSegment) {
+                                tickSynth.triggerAttackRelease("C4", "8n");
+                                lastPlayedSegment = i;
+                            }
+                            const fraction = (distanceToDraw - distanceCovered) / segLength;
+                            const currentX = segStart.x + (segEnd.x - segStart.x) * fraction;
+                            const currentY = segStart.y + (segEnd.y - segStart.y) * fraction;
+                            ctx.lineTo(currentX, currentY); //畫轉彎前或是轉彎點的線
+                            break;
+                        }
+                        distanceCovered += segLength;
+                        ctx.lineTo(segEnd.x, segEnd.y);//畫出完整的一條線，從第一個點到第二個點
+                    }
+                    ctx.stroke();
+                    if (progress < 1) {
+                        animationFrameId = requestAnimationFrame(frame);
+                    } else {
+                        onFinish();
+                    }
+                }
+                animationFrameId = requestAnimationFrame(frame);
+            }
+
+            function showAllResults() {
+                //先停止當前的動畫
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+
+                //選取所有按鈕無法使用
+                document.querySelectorAll('.start-btn').forEach(b => b.disabled = true);
+
+                for (let i = 0; i < numLadders; i++) {
+                    //檢查那些路線是已經被處理過的，就直接跳過
+                    if (revealedResults.some(r => r.startIndex === i)) continue; //continue是迴圈中專用的用法，意思是跳過這個i，去處理i+1
+
+                    const { path, endPoint } = getPathCoordinates(i); // 計算完整路徑和終點
+                    const pathColor = PATH_COLORS[i % PATH_COLORS.length];
+
+                    completedPaths.push({ path, color: pathColor });
+
+                    const startLabel = startLabels[i] || `起點 ${i+1}`;
+                    const endLabel = endLabels[endPoint] || `終點 ${endPoint+1}`;
+                    //尋找到 endPointsContainer 這個『終點區』裡面，幫我找出唯一一個符合以下兩個條件的人（HTML 元素），然後把他存到 winnerLabel 這個變數裡
+                    //他的身上必須貼著 end-point-label 這張名牌 (class)。
+                    //他的座位號碼 (data-index) 必須正好等於我們剛剛算出來的獲獎者編號 endPoint。
+                    const winnerLabel = endPointsContainer.querySelector(`.end-point-label[data-index="${endPoint}"]`);
+                        if (winnerLabel) { // 找到後的改變
+                        winnerLabel.classList.replace('opacity-0', 'opacity-100');
+                        winnerLabel.style.backgroundColor = pathColor;
+                        winnerLabel.classList.add('font-bold','scale-110');
+                    }
+
+                    revealedResults.push({ startIndex: i, endIndex: endPoint, startLabel, endLabel }); //將完整結果記錄下來(起點、終點、名稱)
+
+                    const startButton = startPointsContainer.querySelector(`.start-btn[data-index="${i}"]`);
+                    if (startButton) {
+                        startButton.classList.replace('bg-sky-800/60', 'bg-slate-400');
+                    }
+                }
+
+                redrawCanvas();
+                renderSummaryTable();
+                resultsContainer.innerHTML = `
+                    <span class="block text-m text-slate-300 my-auto tracking-[3px]">Showing all results</span>
+                    <span class="block text-m text-slate-300 my-auto tracking-[3px]">所有結果已顯示</span>`;
+            }
+            showAllBtn.onclick = showAllResults; //為這個function增加按鈕(同事件監聽器用法)
+//9/5
+            function renderSummaryTable() {
+                summaryTableBody.innerHTML = '';
+                const sortedResults = revealedResults.sort((a, b) => a.startIndex - b.startIndex);
+                sortedResults.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.classList.add('border-b');
+                    row.innerHTML = `<td class="p-3 break-words">${result.startLabel}</td><td class="p-3 break-words">${result.endLabel}</td>`;
+                    summaryTableBody.appendChild(row);
+                });
+                // 當所有結果都出來後，顯示彈窗並改變按鈕功能
+                if (revealedResults.length === numLadders) {
+                     summaryModal.classList.remove('hidden');
+
+                     // 將「顯示所有結果」按鈕轉換為「查看最終結果」按鈕
+                     const showAllBtnContent = showAllBtn.querySelector('div');
+                     if (showAllBtnContent) {
+                         showAllBtnContent.innerHTML = `
+                            <span class="block text-base leading-tight tracking-[3px]">查看最終結果</span>  
+                            <span class="block font-bold text-base opacity-75 font-normal tracking-[5px] ">VIEW SUMMARY</span>
+                         `;
+                     }
+                     showAllBtn.onclick = openSummaryModal; // 重新綁定點擊事件
+                     showAllBtn.disabled = false; // 確保按鈕是可用的
+                }
+            }
+
+            // ... (script content)
+            for (let i = 0; i < numLadders; i++) {
+                const xPos = getX(i);
+
+                const button = document.createElement('button');
+                button.textContent = startLabels[i] || `起點 ${i + 1}`;
+                button.dataset.index = i; // 按鈕會記住自己的編號
+                button.classList.add('start-btn', 'btn', 'bg-sky-800/60', 'text-white', 'font-semibold', 'py-2', 'px-4', 'rounded-lg', 'shadow-lg', 'absolute', 'w-24', 'truncate');
+                button.style.left = `${xPos}px`; // 對齊左邊
+                button.style.transform = 'translateX(-50%)'; // 平行左移置自身按鈕的一半(剛好能對齊線)
+                button.addEventListener('click', () => {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    document.querySelectorAll('.start-btn').forEach(b => b.disabled = true);
+                    resultsContainer.textContent = '...';
+                    
+                    const { path, endPoint } = getPathCoordinates(i);
+                    const pathColor = PATH_COLORS[i % PATH_COLORS.length]; // % 代表除完的餘數
+                    
+                    animatePath(path, pathColor, () => {
+                        finishSynth.triggerAttackRelease("G4", "4n");
+                        const startLabel = startLabels[i] || `起點 ${i+1}`;
+                        const endLabel = endLabels[endPoint] || `終點 ${endPoint+1}`;
+                        resultsContainer.textContent = `${startLabel}  ➜  ${endLabel}`;
+                        
+                        const winnerLabel = endPointsContainer.querySelector(`.end-point-label[data-index="${endPoint}"]`);
+                        if (winnerLabel) {
+                            winnerLabel.classList.replace('opacity-0', 'opacity-100');
+                            winnerLabel.style.backgroundColor = pathColor;
+                            winnerLabel.classList.add('font-bold', 'scale-110','text-base');
+                            
+                        }
+
+                        completedPaths.push({ path, color: pathColor });
+                        if (!revealedResults.some(r => r.startIndex === i)) {
+                            revealedResults.push({ startIndex: i, endIndex: endPoint, startLabel, endLabel });
+                        }
+                        renderSummaryTable();
+                        
+                        button.disabled = true;
+                        button.classList.replace('bg-sky-800/60', 'bg-slate-400');
+
+                        document.querySelectorAll('.start-btn').forEach(b => {
+                            if (!b.classList.contains('bg-slate-400')) {
+                                b.disabled = false;
+                            }
+                        });
+                    });
+                });
+                startPointsContainer.appendChild(button);
+
+                const endLabel = document.createElement('div');
+                endLabel.textContent = endLabels[i] || `終點 ${i + 1}`;
+                endLabel.dataset.index = i;
+                endLabel.classList.add('font-medium', 'text-slate-100', 'end-point-label', 'opacity-0', 'w-28', 'truncate', 'absolute', 'whitespace-normal', 'break-words', 'px-3', 'py-1', 'rounded-lg');
+                endLabel.style.left = `${xPos}px`;
+                endLabel.style.transform = 'translateX(-50%)';
+                endPointsContainer.appendChild(endLabel);
+            }
+            redrawCanvas();
+        }
+
+        generateBtn.addEventListener('click', () => {
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            //.trim(0) 是去除頭尾空白處
+            //.split('\n') 是將每一條換行線 (\n)，把這張大紙條剪成很多張小紙條。(變成字串陣列)
+            //.filter(l => l) 檢查一下剪好的這些小紙條，把所有空白的 ('') 都挑出來丟掉，只留下有寫字的。
+            //l => l：這是一個簡寫的箭頭函式，意思是「回傳項目本身」。
+            //這是陣列的「過濾器」。它會檢查陣列中的每一個項目，只保留那些「看起來是真的 (Truthy)」的項目。
+            //像 '蘋果' 這樣的非空字串，被認為是 Truthy (真的)。
+            //而 '' (空字串)，則被認為是 Falsy (假的)。
+            const startLabels = startInputs.value.trim().split('\n').filter(l => l);
+            const endLabels = endInputs.value.trim().split('\n').filter(l => l);
+
+
+            if (startLabels.length < 2 || startLabels.length !== endLabels.length) {
+                setupError.textContent = '錯誤：起點和終點的數量必須一致，且至少要有兩項！';
+                return;
+            }
+            setupError.textContent = '';
+
+            // 將使用者輸入儲存到本地
+            localStorage.setItem('ghostLegStartLabels', startInputs.value);
+            localStorage.setItem('ghostLegEndLabels', endInputs.value);
+            
+            const numLadders = startLabels.length;
+            const rungs = [];
+
+            // --- 改善後的橫槓產生邏輯，確保分佈更均勻 ---
+            const rungCount = Math.floor(numLadders * 2.5);//.floor是無條件捨去到整數
+            const RUNG_TOP_MARGIN = 120;
+            const RUNG_BOTTOM_MARGIN = 120;
+            const MIN_RUNG_V_SPACING = 30;
+            const RUNG_AREA_HEIGHT = canvas.height - RUNG_TOP_MARGIN - RUNG_BOTTOM_MARGIN;
+
+            // 1. 將畫布垂直分成數個區域，確保橫槓垂直分佈均勻
+            const zoneHeight = RUNG_AREA_HEIGHT / rungCount;
+            const availableStarts = Array.from({ length: numLadders - 1 }, (_, i) => i);//.from是將後面的內容改成陣列
+
+            for (let i = 0; i < rungCount; i++) {
+                // 2. 在每個區域內隨機決定一個Y座標
+                const zoneStartY = RUNG_TOP_MARGIN + i * zoneHeight;
+                const y = zoneStartY + (Math.random() * zoneHeight * 0.8) + (zoneHeight * 0.1); // 在區域中間80%隨機，避免太貼近邊界
+
+                // 3. 隨機打亂可用的起點梯子，避免橫槓都集中在左邊
+                const shuffledStarts = [...availableStarts].sort(() => Math.random() - 0.5);
+
+                // 4. 尋找一個有效位置放置橫槓 (避免在同一梯子上靠太近)
+                for (const start of shuffledStarts) {
+                    const end = start + 1;
+                    // 修正：讓檢查邏輯更完整，同時考慮左右兩側的梯子，避免佈局漏洞，Math.abs是代表絕對值
+                    const tooClose = rungs.some(r => (r.start === start || r.end === start || r.start === end || r.end === end) && Math.abs(r.y - y) < MIN_RUNG_V_SPACING);
+                    if (!tooClose) { rungs.push({ y, start, end }); break; }
+                }
+            }
+            // ** 新增的防呆機制 **
+            for (let i = 0; i < numLadders; i++) {
+                const hasRung = rungs.some(r => r.start === i || r.end === i); //檢查直線上是否有橫線
+                if (!hasRung) {
+                    let neighbor;
+                    if (i === 0) {
+                        neighbor = 1;//如果是第一條，就連一條橫線到第二條
+                    } else if (i === numLadders - 1) {
+                        neighbor = i - 1;//如果是最後一條，就連一條橫線到倒數第二條
+                    } else {
+                        neighbor = Math.random() < 0.5 ? i - 1 : i + 1; //如果都不是，就隨機連線
+                    }
+
+                    const start = Math.min(i, neighbor);
+                    const end = Math.max(i, neighbor);
+                    
+                    // 簡化防呆機制：當梯子沒有橫槓時，直接在隨機高度添加一個。
+                    // 舊的複雜檢查邏輯在處理邊緣案例時有時會失敗，導致直線路徑。
+                    // 這種更直接的方法能保證遊戲的穩定性。
+                    const newRungY = RUNG_TOP_MARGIN + Math.random() * RUNG_AREA_HEIGHT; //在隨機高度加加一個橫線
+                    rungs.push({ y: newRungY, start, end });
+                }
+            }
+
+            const gameConfig = { numLadders, startLabels, endLabels, rungs: rungs.sort((a, b) => a.y - b.y) };
+            setupView.classList.add('hidden');
+            gameView.classList.remove('hidden');
+            initializeGame(gameConfig);
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameView.classList.add('hidden');
+            summaryModal.classList.add('hidden'); // 重設時也隱藏彈窗
+            if (showAllBtn) {
+                showAllBtn.onclick = null;
+            }
+            setupView.classList.remove('hidden');
+        });
+
+        closeSummaryBtn.addEventListener('click', () => {
+            summaryModal.classList.add('hidden');
+        });
+        
+        function autoAdjustTextarea() {
+            const startLines = startInputs.value.split('\n').length;
+            const endLines = endInputs.value.split('\n').length;
+            const maxLines = Math.max(startLines, endLines, 5);
+            startInputs.rows = maxLines;
+            endInputs.rows = maxLines;
+        };
+
+        // 頁面載入時，嘗試讀取並應用上次的輸入
+        function loadSavedInputs() {
+            const savedStarts = localStorage.getItem('ghostLegStartLabels');
+            const savedEnds = localStorage.getItem('ghostLegEndLabels');
+            if (savedStarts) startInputs.value = savedStarts;
+            if (savedEnds) endInputs.value = savedEnds;
+            autoAdjustTextarea();
+        }
+
+        // 初始化頁面
+        loadSavedInputs();
+        startInputs.addEventListener('input', autoAdjustTextarea);
+        endInputs.addEventListener('input', autoAdjustTextarea);
+    </script>
+</body>
+</html>
