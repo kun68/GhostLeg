@@ -65,9 +65,9 @@ VOLKSWAGEN</textarea>
 
         <!-- 遊戲畫面 (預設隱藏) -->
         <div id="gameView" class="hidden text-center">
-            <div id="start-points" class="relative mx-auto" style="width: 800px; min-height: 50px;"></div>
-            <canvas id="ladderCanvas" width="800" height="600" class=" my-8 mx-auto block bg-white/35 backdrop-blur-lg shadow-lg rounded-2xl"></canvas>
-            <div id="end-points" class="relative mx-auto" style="width: 800px; min-height: 50px;"></div>
+            <div id="start-points" class="relative mx-auto min-h-[50px]"></div>
+            <canvas id="ladderCanvas" class="my-8 mx-auto block bg-white/35 backdrop-blur-lg shadow-lg rounded-2xl w-full max-w-[800px]"></canvas>
+            <div id="end-points" class="relative mx-auto min-h-[50px]"></div>
             <div id="results" class="mt-2 text-2xl font-medium text-slate-300 h-16 flex flex-col items-center justify-center my-10"></div>
             <div class="mt-4 flex justify-center space-x-4">
                 <button id="showAllBtn" class="btn bg-sky-800 text-white font-semibold py-2 px-6 rounded-lg w-50">
@@ -143,6 +143,17 @@ VOLKSWAGEN</textarea>
             summaryModal.classList.add('hidden');
             summaryTableBody.innerHTML = '';
             showAllBtn.disabled = false;
+
+            // --- Responsive Canvas Sizing ---
+            // Set the canvas drawing buffer size to match its CSS-defined display size.
+            // This makes the canvas drawing responsive.
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientWidth * (600 / 800); // Maintain 4:3 aspect ratio
+
+            // Update the container widths for start/end points to match the canvas
+            startPointsContainer.style.width = `${canvas.width}px`;
+            endPointsContainer.style.width = `${canvas.width}px`;
+            // --- End Responsive Sizing ---
 
             let completedPaths = [];
             let revealedResults = [];
