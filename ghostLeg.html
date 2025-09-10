@@ -140,7 +140,7 @@ VOLKSWAGEN</textarea>
             const maxFontSize = 14; // Corresponds to 'text-sm'
             const minFontSize = 8;
             let needsVerticalLayout = false;
-            let smallestHorizontalFontSize = maxFontSize;
+            const horizontalFontSizes = new Map(); // Store calculated sizes for horizontal mode
 
             // Phase 1: Determine layout mode and find the single smallest font size for horizontal display
             for (const element of allLabels) {
@@ -158,10 +158,7 @@ VOLKSWAGEN</textarea>
                     break; // If one needs vertical, all go vertical. Stop checking.
                 }
 
-                // Track the smallest font size required by any label
-                if (currentFontSize < smallestHorizontalFontSize) {
-                    smallestHorizontalFontSize = currentFontSize;
-                }
+                horizontalFontSizes.set(element, currentFontSize); // Store the calculated size for this element
             }
 
             // Phase 2: Apply the determined layout and a UNIFORM font size to ALL elements
@@ -180,8 +177,12 @@ VOLKSWAGEN</textarea>
                         element.style.fontSize = `${currentFontSize}px`;
                     }
                 } else { // Apply horizontal layout
-                    // Apply the single, uniform font size to all horizontal labels
-                    element.style.fontSize = `${smallestHorizontalFontSize}px`;
+                    element.style.writingMode = '';
+                    element.style.textOrientation = '';
+                    element.style.height = ''; // Reset height from vertical mode
+                    element.style.transform = 'translateX(-50%)'; // Reset transform for horizontal centering
+                    // Apply the individually calculated font size for this element
+                    element.style.fontSize = `${horizontalFontSizes.get(element)}px`;
                 }
             }
         }
@@ -399,7 +400,7 @@ VOLKSWAGEN</textarea>
                 button.textContent = startLabels[i] || `起點 ${i + 1}`;
                 button.dataset.index = i;
                 // RWD CHANGE: 移除 truncate class
-                button.classList.add('start-btn', 'btn', 'bg-sky-800/60', 'text-white', 'font-semibold', 'py-2', 'px-2', 'text-sm', 'rounded-lg', 'shadow-lg', 'absolute');
+                button.classList.add('start-btn', 'btn', 'bg-sky-800/60', 'text-white', 'font-semibold', 'py-1.5', 'px-2', 'text-sm', 'rounded-lg', 'shadow-lg', 'absolute');
                 button.style.transform = 'translateX(-50%)'; // Initial transform
                 button.addEventListener('click', () => {
                     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -445,7 +446,7 @@ VOLKSWAGEN</textarea>
                 endLabel.textContent = endLabels[i] || `終點 ${i + 1}`;
                 endLabel.dataset.index = i;
                 // RWD CHANGE: 移除 truncate class
-                endLabel.classList.add('font-medium', 'text-slate-100', 'end-point-label', 'opacity-0', 'absolute', 'px-2', 'py-1', 'text-sm', 'rounded-lg');
+                endLabel.classList.add('font-medium', 'text-slate-100', 'end-point-label', 'opacity-0', 'absolute', 'px-2', 'py-1', 'text-sm', 'rounded-lg', 'flex', 'items-center', 'justify-center', 'text-center');
                 endLabel.style.transform = 'translateX(-50%)'; // Initial transform for centering
                 endPointsContainer.appendChild(endLabel);
             }
