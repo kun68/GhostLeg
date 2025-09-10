@@ -132,6 +132,60 @@ VOLKSWAGEN</textarea>
         let animationFrameId;
         let currentGameResizeHandler = null;
 
+        // Helper function to synchronize label layouts (font size and orientation)
+        function synchronizeLabelLayouts() {
+            const allLabels = [...document.querySelectorAll('.start-btn, .end-point-label')];
+            if (allLabels.length === 0) return;
+
+            const maxFontSize = 14; // Corresponds to 'text-sm'
+            const minFontSize = 8;
+            let needsVerticalLayout = false;
+            let smallestHorizontalFontSize = maxFontSize;
+
+            // Phase 1: Determine layout mode and find the single smallest font size for horizontal display
+            for (const element of allLabels) {
+                element.style.writingMode = ''; // Reset to horizontal for measurement
+                let currentFontSize = maxFontSize;
+                element.style.fontSize = `${currentFontSize}px`;
+
+                while (element.scrollWidth > element.clientWidth && currentFontSize > minFontSize) {
+                    currentFontSize -= 0.5;
+                    element.style.fontSize = `${currentFontSize}px`;
+                }
+
+                if (element.scrollWidth > element.clientWidth) {
+                    needsVerticalLayout = true;
+                    break; // If one needs vertical, all go vertical. Stop checking.
+                }
+
+                // Track the smallest font size required by any label
+                if (currentFontSize < smallestHorizontalFontSize) {
+                    smallestHorizontalFontSize = currentFontSize;
+                }
+            }
+
+            // Phase 2: Apply the determined layout and a UNIFORM font size to ALL elements
+            for (const element of allLabels) {
+                if (needsVerticalLayout) {
+                    element.style.writingMode = 'vertical-rl';
+                    element.style.textOrientation = 'mixed';
+                    element.style.height = '96px'; // h-24
+                    element.style.transform = 'translateX(-50%) translateY(-25%)';
+                    
+                    // Recalculate font size for vertical, ensuring it fits
+                    let currentFontSize = maxFontSize;
+                    element.style.fontSize = `${currentFontSize}px`;
+                    while (element.scrollHeight > element.clientHeight && currentFontSize > minFontSize) {
+                        currentFontSize -= 0.5;
+                        element.style.fontSize = `${currentFontSize}px`;
+                    }
+                } else { // Apply horizontal layout
+                    // Apply the single, uniform font size to all horizontal labels
+                    element.style.fontSize = `${smallestHorizontalFontSize}px`;
+                }
+            }
+        }
+
         function openSummaryModal() {
             summaryModal.classList.remove('hidden');
         }
@@ -214,40 +268,25 @@ VOLKSWAGEN</textarea>
                 PADDING = Math.max(25, canvas.width * 0.08);
 
                 const contentWidth = canvas.width - (PADDING * 2);
-                const spacing = numLadders > 1 ? contentWidth / (numLadders - 1) : 0;
-                getX = (index) => PADDING + (index * spacing);
+                // RWD_CHANGE: 改為將寬度均分為N等份，並將元素置於每份的中心，視覺上更平均
+                const spacing = numLadders > 1 ? contentWidth / (numLadders - 1) : 0; // 計算梯子之間的間距
+                getX = (index) => PADDING + (index * spacing); // 計算每個梯子的X座標，使其填滿整個內容區域
 
-                const elementWidth = Math.max(50, Math.min(96, spacing * 0.85));
-
-                // Helper function to adjust font size dynamically
-                function adjustFontSize(element) {
-                    const maxFontSize = 14; // Corresponds to 'text-sm'
-                    const minFontSize = 8;
-                    let currentFontSize = maxFontSize;
-                    element.style.fontSize = `${currentFontSize}px`; // Reset font size
-
-                    // Loop to reduce font size until it fits
-                    // Note: 'clientWidth' is used as it reflects the actual displayed width
-                    while (element.scrollWidth > element.clientWidth && currentFontSize > minFontSize) {
-                        currentFontSize -= 0.5;
-                        element.style.fontSize = `${currentFontSize}px`;
-                    }
-                }
+                const elementWidth = Math.max(40, Math.min(120, spacing * 0.85)); // 按鈕寬度為間距的85%，並設定上下限
 
                 document.querySelectorAll('.start-btn').forEach(button => {
                     const index = parseInt(button.dataset.index);
                     button.style.left = `${getX(index)}px`;
-                    button.style.width = `${elementWidth}px`;
-                    adjustFontSize(button); // Adjust font size after setting width
+                    button.style.width = `${elementWidth}px`; // Set width for all
                 });
 
                 document.querySelectorAll('.end-point-label').forEach(label => {
                     const index = parseInt(label.dataset.index);
                     label.style.left = `${getX(index)}px`;
                     label.style.width = `${elementWidth}px`;
-                    adjustFontSize(label); // Adjust font size after setting width
                 });
-                
+
+                synchronizeLabelLayouts(); // Adjust layout for all labels at once
                 redrawCanvas();
             }
 
@@ -361,7 +400,7 @@ VOLKSWAGEN</textarea>
                 button.dataset.index = i;
                 // RWD CHANGE: 移除 truncate class
                 button.classList.add('start-btn', 'btn', 'bg-sky-800/60', 'text-white', 'font-semibold', 'py-2', 'px-2', 'text-sm', 'rounded-lg', 'shadow-lg', 'absolute');
-                button.style.transform = 'translateX(-50%)';
+                button.style.transform = 'translateX(-50%)'; // Initial transform
                 button.addEventListener('click', () => {
                     if (animationFrameId) cancelAnimationFrame(animationFrameId);
                     document.querySelectorAll('.start-btn').forEach(b => b.disabled = true);
@@ -380,7 +419,8 @@ VOLKSWAGEN</textarea>
                         if (winnerLabel) {
                             winnerLabel.classList.replace('opacity-0', 'opacity-100');
                             winnerLabel.style.backgroundColor = pathColor;
-                            winnerLabel.classList.add('font-bold', 'scale-110','text-base');
+                            winnerLabel.classList.add('font-bold', 'scale-110');
+                            synchronizeLabelLayouts(); // Re-synchronize all layouts after style change
                         }
 
                         completedPaths.push({ path, color: pathColor });
@@ -406,7 +446,7 @@ VOLKSWAGEN</textarea>
                 endLabel.dataset.index = i;
                 // RWD CHANGE: 移除 truncate class
                 endLabel.classList.add('font-medium', 'text-slate-100', 'end-point-label', 'opacity-0', 'absolute', 'px-2', 'py-1', 'text-sm', 'rounded-lg');
-                endLabel.style.transform = 'translateX(-50%)';
+                endLabel.style.transform = 'translateX(-50%)'; // Initial transform for centering
                 endPointsContainer.appendChild(endLabel);
             }
 
@@ -535,4 +575,3 @@ VOLKSWAGEN</textarea>
     </script>
 </body>
 </html>
-
